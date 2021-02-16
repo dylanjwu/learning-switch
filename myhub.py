@@ -16,8 +16,8 @@ def main(net):
             # raises shutdown exception if Switchyard framework is shut down
             # raises NoPackets exception if no packets received before timeout value
             timestamp,input_port,packet = net.recv_packet()
-            print()
-            # print("Received {} on {}".format(packet, input_port))
+            if packet[0].dst in [p.ethaddr for p in net.ports()]:
+                continue
 
             """
             alternatively:
@@ -53,3 +53,4 @@ def main(net):
     net.shutdown()
 
 
+# TODO: Implement learning bridge algorithm 
