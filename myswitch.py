@@ -7,56 +7,62 @@ f_table = {}
 
 def find_first_open_port():
     for port in f_table:
-        if port['addr'] == None:
+        if f_table[port]['addr'] == None:
             return port
     return None
 
 def find_port_to_evict(net):
-    oldest_time = f_table[net.ports()]['time']
     oldest_port = net.ports()[0]
+    oldest_time = f_table[oldest_port]['time']
     for port in f_table:
-        if port['time'] < oldest_time:
-            oldest_time = port['time']
+        timestamp = f_table[port]['time']
+        if timestamp != None and timestamp < oldest_time:
+            oldest_time = timestamp
             oldest_port = port
     return oldest_port
 
+def evict_time_out_ports():
+    for port in f_table:
+        curr_time = time.time()
+        timestamp = f_table[port]['time']
+        #if 30 sec diff between curr_time and mapping's time, evict
+        print("PORT: " + port)
+        if timestamp != None and curr_time - timestamp >= 30:
+            f_table[port] = {'addr': None, 'time': None}
 
-# net: network object; is necessary
-def main(net):
-
+def initialize_f_table(net):
     log_info("Hub is starting up with these ports")
     for port in net.ports():
         log_info("{}: ethernet address {}".format(port.name, port.ethaddr))
         f_table[port.name] = {'addr': None, 'time': None}
-        print(f_table)
+        print(port)
+        print(f_table[port.name])
+
+# net: network object; is necessary
+def main(net):
+
+    initialize_f_table(net)
 
     while True:
+        # evict_time_out_ports()
         try:
             # net.recv_packet(timeout=None) returns named 3-tuple
             # unless timeout >= 0, method 'blocks' until packet is received
             # raises shutdown exception if Switchyard framework is shut down
             # raises NoPackets exception if no packets received before timeout value
             timestamp,input_port,packet = net.recv_packet()
-            if f_table[input_port]['addr'] == None:
-                f_table[input_port]['addr'] = packet[0].src
-                f_table[input_port]['time'] = timestamp
-
+            if packet[0].dst in [port.ethaddr for port in net.ports()]:
+                continue
             open_port = find_first_open_port()
+            if f_table[input_port]['addr'] == None:
+                curr_port = input_port
             if open_port != None:
-                f_table[open_port]['addr'] = packet[0].src
-                f_table[open_port]['time'] = timestamp
-
+                curr_port = open_port
             else:
-                to_evict = find_port_to_evict(net) 
-                f_table[to_evict]['addr'] = packet[0].src
-                f_table[to_evict]['time'] = timestamp
+                curr_port = find_port_to_evict(net) 
 
-            """
-            alternatively:
-            recvdata = net.recv_packet()
-            print("At {}, received {} on {}".format(
-                recvdata.timestap, recvdata.packet, recvdata.input_port))
-            """
+            f_table[curr_port] = {'addr': packet[0].src, 'time': timestamp}
+           
         except Shutdown:
             log_info("Got shutdown signal; exiting")
             break
@@ -77,8 +83,8 @@ def main(net):
 
         # check if port has same address as the packet's dst address
         already_sent = False
-        for port in f_table.keys():
-            if port != input_port and port['addr'] == packet[0].dst:
+        for port in f_table:
+            if port != input_port and f_table[port]['addr'] == packet[0].dst:
                 net.send_packet(port, packet)
                 already_sent = True
 
@@ -91,9 +97,3 @@ def main(net):
 
     # should always be the last thing to do
     net.shutdown()
-
-
-
-
-
-# TODO: Implement learning bridge algorithm 
