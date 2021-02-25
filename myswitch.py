@@ -8,12 +8,7 @@ EVICTION_POLICY = 'time' # time, freq, or size
 MAX_F_TABLE_SIZE = 6
 TIMEOUT_SECS = 5
 
-class Rules:
-    def __init__(self):
-        self.table = {}
-
-f_table = Rules().table
-
+f_table = {}
 
 def evict(net, crit):
     least_addr = list(f_table.keys())[0]
