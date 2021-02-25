@@ -43,7 +43,6 @@ def evict_time_out_ports():
         f_table.__delitem__(addr_to_evict)
 
 def initialize_f_table(net):
-    # global f_table
     log_info("Hub is starting up with these ports")
     for port in net.ports():
         log_info("{}: ethernet address {}".format(port.name, port.ethaddr))
