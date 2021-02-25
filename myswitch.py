@@ -4,26 +4,34 @@ from switchyard.lib.userlib import *
 import time
 
 BROADCAST_ADDR = 'ff:ff:ff:ff:ff:ff'
+EVICTION_POLICY = 'time' # time, freq, or size
 MAX_F_TABLE_SIZE = 6
 TIMEOUT_SECS = 5
 f_table = {}
 
+def evict_least_traffic(net):
+    # by application payload bytes (ignoring lower layer headers)
+    pass
 
-def evict_oldest_entry(net):
+def evict(net, crit):
     global f_table
-    log_info("in evict_oldest_entry() function")
 
-    oldest_addr = list(f_table.keys())[0]
-    log_info("{}".format(oldest_addr))
-    oldest_time = f_table[oldest_addr]['time']
+    log_info("in evict() function")
+    least_addr = list(f_table.keys())[0]
+    log_info("{}".format(least_addr))
+
+    if (not(crit=='time' or crit=='freq' or crit=='size')):
+        return
+
+    least = f_table[least_addr][crit]
     for addr in f_table:
-        timestamp = f_table[addr]['time']
-        if timestamp < oldest_time:
-            oldest_time = timestamp
-            oldest_addr = addr
+        x = f_table[addr][crit]
+        if x < least:
+            least = x
+            least_addr = addr
     
-    log_info(f"Evicting entry with addr {oldest_addr} at port {f_table[oldest_addr]['port']}")
-    f_table.__delitem__(oldest_addr)
+    log_info(f"Evicting entry with addr {least_addr} at port {f_table[least_addr]['port']}")
+    f_table.__delitem__(least_addr)
 
 
 def evict_time_out_ports():
@@ -48,7 +56,7 @@ def initialize_f_table(net):
     for port in net.ports():
         log_info("{}: ethernet address {}".format(port.name, port.ethaddr))
         log_info(str(port.ethaddr))
-        f_table[str(port.ethaddr)] = {'port': port.name, 'time': time.time()}
+        f_table[str(port.ethaddr)] = {'port': port.name, 'time': time.time(), 'freq': 0, 'size': 0}
 
 def print_f_table():
     log_info(f"PRINTING F_TABLE (length of {len(f_table)}):\n")
@@ -71,7 +79,9 @@ def main(net):
         try:            
             print_f_table()
             evict_time_out_ports()
+
             timestamp,input_port,packet = net.recv_packet()
+            packet_size = len(packet.to_bytes())
 
             # Part 1: RECIEVE PACKET
             # drop packet if destination is the switch
@@ -82,10 +92,17 @@ def main(net):
                  
             if str(src_addr) not in f_table.keys():
                 if len(f_table) >= MAX_F_TABLE_SIZE:
-                    evict_oldest_entry(net)
-                f_table[str(src_addr)] = {'port': input_port, 'time': time.time()}
+                    evict(net, EVICTION_POLICY)
+
+                f_table[str(src_addr)] = {'port': input_port, 
+                                          'time': time.time(), 
+                                          'freq': 1, 
+                                          'size': packet_size}
             else:
                 f_table[str(src_addr)]['time'] = time.time()
+                f_table[str(src_addr)]['freq'] += 1
+                f_table[str(src_addr)]['size'] += packet_size
+
 
         except Shutdown:
             log_info("Got shutdown signal; exiting")
@@ -111,7 +128,7 @@ def main(net):
                     already_sent = True
             if not already_sent:
                 broadcast(net, packet, input_port)
-        time.sleep(10)
+        # time.sleep(10)
 
     net.shutdown()
 

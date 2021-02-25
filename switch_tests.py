@@ -13,6 +13,8 @@ def mk_pkt(hwsrc, hwdst, ipsrc, ipdst, reply=False):
         icmppkt.icmptype = ICMPType.EchoRequest
     icmppkt.icmpcode = 0
     icmppkt.icmpdata.sequence = 42
+
+    icmppkt.icmpdata.data = "hello, world"
     return ether + ippkt + icmppkt
 
 def learning_switch_tests():
@@ -47,7 +49,10 @@ def learning_switch_tests():
     s.expect(PacketOutputEvent("eth0", testpkt, "eth2", testpkt, display=Ethernet),
         "The Ethernet frame with a broadcast destination address should be forwarded out ports eth0 and eth2")
 
-    # time.sleep(10)
+
+    # s.expect(PacketInputTimeoutEvent(10), "timing out for 10 secs")
+
+
     testpkt = mk_pkt("30:00:00:00:00:04", "ff:ff:ff:ff:ff:ff", "172.16.42.2", "255.255.255.255")
     s.expect(PacketInputEvent("eth1", testpkt, display=Ethernet), 
         "An Ethernet frame with a broadcast destination address should arrive on eth1")
@@ -60,7 +65,7 @@ def learning_switch_tests():
     s.expect(PacketOutputEvent("eth0", testpkt, "eth2", testpkt, display=Ethernet),
         "The Ethernet frame with a broadcast destination address should be forwarded out ports eth0 and eth2")
 
-
     return s
+
 
 scenario = learning_switch_tests()
