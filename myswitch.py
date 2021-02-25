@@ -9,6 +9,9 @@ MAX_F_TABLE_SIZE = 6
 TIMEOUT_SECS = 5
 f_table = {}
 
+def evict_least_traffic(net):
+    # by application payload bytes (ignoring lower layer headers)
+    pass
 
 def evict(net, crit):
     global f_table
