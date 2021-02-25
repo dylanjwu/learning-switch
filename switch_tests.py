@@ -50,7 +50,7 @@ def learning_switch_tests():
         "The Ethernet frame with a broadcast destination address should be forwarded out ports eth0 and eth2")
 
 
-    # s.expect(PacketInputTimeoutEvent(10), "timing out for 10 secs")
+    s.expect(PacketInputTimeoutEvent(10), "timing out for 10 secs")
 
 
     testpkt = mk_pkt("30:00:00:00:00:04", "ff:ff:ff:ff:ff:ff", "172.16.42.2", "255.255.255.255")

@@ -4,23 +4,17 @@ from switchyard.lib.userlib import *
 import time
 
 BROADCAST_ADDR = 'ff:ff:ff:ff:ff:ff'
-EVICTION_POLICY = 'time' # time, freq, or size
 MAX_F_TABLE_SIZE = 6
 TIMEOUT_SECS = 5
 
-class Rules:
-    def __init__(self):
-        self.table = {}
+f_table = {}
 
-f_table = Rules().table
-
-
-def evict(net, crit):
+def evict(net):
     least_addr = list(f_table.keys())[0]
-    least = f_table[least_addr][crit]
+    least = f_table[least_addr]['time']
     
     for addr in f_table:
-        x = f_table[addr][crit]
+        x = f_table[addr]['time']
         if x < least:
             least = x
             least_addr = addr
@@ -47,7 +41,7 @@ def initialize_f_table(net):
     for port in net.ports():
         log_info("{}: ethernet address {}".format(port.name, port.ethaddr))
         log_info(str(port.ethaddr))
-        f_table[str(port.ethaddr)] = {'port': port.name, 'time': time.time(), 'freq': 0, 'size': 0}
+        f_table[str(port.ethaddr)] = {'port': port.name, 'time': time.time()}
 
 def print_f_table():
     log_info(f"PRINTING F_TABLE (length of {len(f_table)}):\n")
@@ -70,7 +64,6 @@ def main(net):
             evict_time_out_ports()
 
             timestamp,input_port,packet = net.recv_packet()
-            packet_size = len(packet.to_bytes())
 
             # Part 1: RECIEVE PACKET
             # drop packet if destination is the switch
@@ -81,16 +74,10 @@ def main(net):
                  
             if str(src_addr) not in f_table.keys():
                 if len(f_table) >= MAX_F_TABLE_SIZE:
-                    evict(net, EVICTION_POLICY)
-
-                f_table[str(src_addr)] = {'port': input_port, 
-                                          'time': time.time(), 
-                                          'freq': 1, 
-                                          'size': packet_size}
+                    evict(net)
+                f_table[str(src_addr)] = {'port': input_port, 'time': time.time()}
             else:
                 f_table[str(src_addr)]['time'] = time.time()
-                f_table[str(src_addr)]['freq'] += 1
-                f_table[str(src_addr)]['size'] += packet_size
 
 
         except Shutdown:
