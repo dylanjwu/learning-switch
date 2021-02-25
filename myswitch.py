@@ -7,41 +7,33 @@ BROADCAST_ADDR = 'ff:ff:ff:ff:ff:ff'
 EVICTION_POLICY = 'time' # time, freq, or size
 MAX_F_TABLE_SIZE = 6
 TIMEOUT_SECS = 5
-f_table = {}
 
-def evict_least_traffic(net):
-    # by application payload bytes (ignoring lower layer headers)
-    pass
+class Rules:
+    def __init__(self):
+        self.table = {}
+
+f_table = Rules().table
+
 
 def evict(net, crit):
-    global f_table
-
-    log_info("in evict() function")
     least_addr = list(f_table.keys())[0]
-    log_info("{}".format(least_addr))
-
-    if (not(crit=='time' or crit=='freq' or crit=='size')):
-        return
-
     least = f_table[least_addr][crit]
+    
     for addr in f_table:
         x = f_table[addr][crit]
         if x < least:
             least = x
             least_addr = addr
     
-    log_info(f"Evicting entry with addr {least_addr} at port {f_table[least_addr]['port']}")
+    log_info(f"Evicting entry with addr {least_addr} on port {f_table[least_addr]['port']}")
     f_table.__delitem__(least_addr)
 
 
 def evict_time_out_ports():
-    log_info("in evict_time_out_ports() function")
     entries_to_evict = []
     for addr in f_table:
         curr_time = time.time()
         timestamp = f_table[addr]['time']
-        #if 30 sec diff between curr_time and mapping's time, evict
-        log_info(f"Time difference of: {curr_time-timestamp}")
         if curr_time - timestamp >= TIMEOUT_SECS:
             entries_to_evict.append(addr)
             log_info(f"Evicting entry with addr {addr} at port {f_table[addr]['port']}")
@@ -51,7 +43,7 @@ def evict_time_out_ports():
         f_table.__delitem__(addr_to_evict)
 
 def initialize_f_table(net):
-    global f_table
+    # global f_table
     log_info("Hub is starting up with these ports")
     for port in net.ports():
         log_info("{}: ethernet address {}".format(port.name, port.ethaddr))
@@ -69,10 +61,8 @@ def broadcast(net, packet, input_port):
         if port.name != input_port:
             net.send_packet(port.name, packet)
             
-
 # net: network object; is necessary
 def main(net):
-    global f_table
     initialize_f_table(net)
 
     while True:
