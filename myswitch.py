@@ -1,7 +1,12 @@
-# the only import statement you should ever need
-# gives you access to Switchyard classes/functions
+"""
+This project was completed by Dylan Wu, Ronan Byrne, Jeremy Davis, and Charlie Zeigler
+
+https://jsommers.github.io/switchyard/writing_a_program.html was referenced in the creation of this project
+"""
+
 from switchyard.lib.userlib import *
 import time
+import random
 
 BROADCAST_ADDR = 'ff:ff:ff:ff:ff:ff'
 MAX_F_TABLE_SIZE = 6
@@ -19,10 +24,10 @@ def evict(net):
         if x < least:
             least = x
             least_addr = addr
-    elif x==least: #randomly selects which item to remove if they have the same time
-        random_select = random.choice([0,1])
-        if random_select==0:
-        least = x
+        elif x==least: #randomly selects which item to remove if they have the same time
+            random_select = random.choice([0,1])
+            if random_select==0:
+                least = x
     log_info(f"Evicting entry with addr {least_addr} on port {f_table[least_addr]['port']}")
     f_table.__delitem__(least_addr)
 
@@ -114,7 +119,6 @@ def main(net):
                     already_sent = True
             if not already_sent:
                 broadcast(net, packet, input_port)
-        # time.sleep(10)
 
     net.shutdown()
 
